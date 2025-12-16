@@ -3,10 +3,15 @@ module "backend_alb" {
   version = "9.16.0"
   name    = "${var.project}-${var.environment}-backend-alb" #roboshop-dev-backend-alb
   vpc_id  = local.vpc_id
-  subnets = local.private_subnet_ids
+  # subnets = local.private_subnet_ids
+
+  # for allowing public and opening in chrome we use this
+  subnets = local.public_subnet_ids
+
   create_security_group = false
   security_groups = [local.backend_alb_sg_id]
-  internal = true  # for private load balancer
+  # internal = true  # for private load balancer
+  internal = false  # for public load balancer
   enable_deletion_protection = false
 
   # we already done creating seperate security group 
