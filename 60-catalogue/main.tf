@@ -1,5 +1,5 @@
 resource "aws_lb_target_group" "catalogue" {
-  name     = "${var.project}-${var.environment}-$catalogue" #roboshop-dev-catalogue
+  name     = "${var.project}-${var.environment}-catalogue" #roboshop-dev-catalogue
   port     = 8080
   protocol = "HTTP"
   vpc_id   = local.vpc_id
@@ -12,5 +12,50 @@ resource "aws_lb_target_group" "catalogue" {
     port = 8080
     timeout = 2
     unhealthy_threshold = 3
+  }
+}
+
+
+
+resource "aws_instance" "catalogue" {
+  ami           = local.ami_id
+  instance_type = "t3.micro"
+  vpc_security_group_ids = [local.catalogue_sg_id]
+  subnet_id = local.private_subnet_id
+  # iam_instance_profile = "Ec2RoleToFetchSSMParams"
+  tags = merge (
+    local.common_tags,
+    {
+      Name = "${var.project}-${var.environment}-catalogue"
+    }
+  )
+}
+
+
+
+# when instance created and completed we trigger this .
+resource "terraform_data" "catalogue" {
+  triggers_replace = [
+    aws_instance.catalogue.id
+  ]
+
+  provisioner "file" {
+    source = "catalogue.sh"
+    destination = "/tmp/catalogue.sh"
+  }
+
+  # to copy file we need connection so after we copy file /tmp/catalogue.sh. we execute this using remote-exec.so run chesaka it will go to catalogue,sh and install ansible. 
+  connection {
+    type     = "ssh"
+    user     = "ec2-user"
+    password = "DevOps321"
+    host     = aws_instance.catalogue.private_ip
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/catalogue.sh",
+      "sudo sh /tmp/catalogue.sh catalogue"
+    ]
   }
 }
