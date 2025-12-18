@@ -72,3 +72,18 @@ resource "aws_ami_from_instance" "catalogue" {
   source_instance_id = aws_instance.catalogue.id
   depends_on =  [aws_ec2_instance_state.catalogue]
 }
+
+# when instance created and completed we trigger this .
+resource "terraform_data" "catalogue_delete" {
+  triggers_replace = [
+    aws_instance.catalogue.id
+  ]
+
+
+  # mke sure we have aws configure in your laptop
+  provisioner "local-exec" {
+    command = "aws ec2 terminate-instances --instance-ids ${aws_instance.catalogue.id}"
+  }
+
+  depends_on = [aws_ami_from_instance.catalogue]
+}
