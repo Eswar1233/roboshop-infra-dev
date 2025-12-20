@@ -141,7 +141,6 @@ resource "aws_launch_template" "catalogue" {
 # autoscaling group create chesaka second time terraform aply chesinappudu old autocaling delte chesi new one create cheyyali
 resource "aws_autoscaling_group" "catalogue" {
   name = "${var.project}-${var.environment}-catalogue"
-  availability_zones = ["us-east-1a"]
   desired_capacity   = 1
   max_size           = 10
   min_size           = 1
@@ -159,7 +158,7 @@ resource "aws_autoscaling_group" "catalogue" {
     for_each = merge(
       local.common_tags,
       {
-        Name = "{var.project}-${var.environment}-catalogue"
+        Name = "${var.project}-${var.environment}-catalogue"
       }
     )
     content{
