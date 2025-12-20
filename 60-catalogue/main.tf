@@ -67,6 +67,7 @@ resource "aws_ec2_instance_state" "catalogue"{
   depends_on = [terraform_data.catalogue]
 }
 
+# we take ami after instance stopped
 resource "aws_ami_from_instance" "catalogue" {
   name               = "${var.project}-${var.environment}-catalogue"
   source_instance_id = aws_instance.catalogue.id
@@ -85,11 +86,131 @@ resource "terraform_data" "catalogue_delete" {
     aws_instance.catalogue.id
   ]
 
-
   # mke sure we have aws configure in your laptop
   provisioner "local-exec" {
     command = "aws ec2 terminate-instances --instance-ids ${aws_instance.catalogue.id}"
   }
 
   depends_on = [aws_ami_from_instance.catalogue]
+}
+
+
+
+# Aws launch template
+resource "aws_launch_template" "catalogue" {
+  name = "${var.project}-${var.environment}-catalogue"
+
+  image_id = aws_ami_from_instance.catalogue.id
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type = "t3.micro"
+  vpc_security_group_ids = [local.catalogue_sg_id]
+  update_default_version = true # each time you update new version will become default
+  tag_specifications {
+    resource_type = "instance"
+  # EC2 tags created by EC2
+    tags = merge(
+        local.common_tags,
+        {
+          Name = "${var.project}-${var.environment}-catalogue"
+        }
+      )
+    }
+
+# volume tags created by ASG
+  tag_specifications {
+    resource_type = "volume"
+
+    tags = merge(
+        local.common_tags,
+        {
+          Name = "${var.project}-${var.environment}-catalogue"
+        }
+      )
+    }
+
+# Launch templae tags
+  tags = merge(
+      local.common_tags,
+      {
+        Name = "${var.project}-${var.environment}-catalogue"
+      }
+    )
+
+}
+
+# autoscaling group create chesaka second time terraform aply chesinappudu old autocaling delte chesi new one create cheyyali
+resource "aws_autoscaling_group" "catalogue" {
+  name = "${var.project}-${var.environment}-catalogue"
+  availability_zones = ["us-east-1a"]
+  desired_capacity   = 1
+  max_size           = 10
+  min_size           = 1
+  target_group_arns = [aws_lb_target_group.catalogue.arn]
+  vpc_zone_identifier = local.private_subnet_ids
+  health_check_grace_period = 90
+  health_check_type = "ELB"
+
+  launch_template {
+    id      = aws_launch_template.catalogue.id
+    version = aws_launch_template.catalogue.latest_version
+  }
+
+  dynamic "tag" {
+    for_each = merge(
+      local.common_tags,
+      {
+        Name = "{var.project}-${var.environment}-catalogue"
+      }
+    )
+    content{
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+    triggers = ["launch_template"]
+  }
+
+  timeouts{
+    create = "15m"
+    delete = "15m"
+  }
+}
+
+
+resource "aws_autoscaling_policy" "catalogue" {
+  name                   = "{var.project}-${var.environment}-catalogue"
+  autoscaling_group_name = aws_autoscaling_group.catalogue.name
+  policy_type = "TargetTrackingScaling"
+  cooldown = 120
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+
+    target_value = 75.0
+  }
+}
+
+
+resource "aws_lb_listener_rule" "catalogue" {
+  listener_arn = aws_lb_listener.front_end.arn
+  priority     = 99
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.static.arn
+  }
+
+  condition {
+    host_header {
+      values = ["my-service.*.terraform.io"]
+    }
+  }
 }
