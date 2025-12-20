@@ -3,7 +3,7 @@ resource "aws_lb_target_group" "catalogue" {
   port     = 8080
   protocol = "HTTP"
   vpc_id   = local.vpc_id
-
+  deregistration_delay = 120
   health_check {
     healthy_threshold = 2
     interval = 5
@@ -71,6 +71,12 @@ resource "aws_ami_from_instance" "catalogue" {
   name               = "${var.project}-${var.environment}-catalogue"
   source_instance_id = aws_instance.catalogue.id
   depends_on =  [aws_ec2_instance_state.catalogue]
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project}-${var.environment}-catalogue"
+    }
+  )
 }
 
 # when instance created and completed we trigger this .
