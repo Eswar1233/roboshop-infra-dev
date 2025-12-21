@@ -306,6 +306,8 @@ resource "aws_security_group_rule" "catalogue_vpn_ssh" {
   security_group_id = module.catalogue.sg_id
 }
 
+
+
 resource "aws_security_group_rule" "catalogue_vpn_http" {
   type              = "ingress"
   from_port         = 8080
@@ -322,6 +324,15 @@ resource "aws_security_group_rule" "catalogue_bastion" {
   protocol          = "tcp"
   source_security_group_id = module.bastion.sg_id
   security_group_id = module.catalogue.sg_id
+}
+
+resource "aws_security_group_rule" "catalogue_ssh_from_bastion" {
+  type                     = "ingress"
+  from_port                = 22
+  to_port                  = 22
+  protocol                 = "tcp"
+  security_group_id         = module.catalogue_sg_id
+  source_security_group_id = module.bastion_sg_id
 }
 
 resource "aws_security_group_rule" "catalogue_backend_alb" {
