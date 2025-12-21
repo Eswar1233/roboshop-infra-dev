@@ -20,7 +20,7 @@ resource "aws_lb_target_group" "catalogue" {
 resource "aws_instance" "catalogue" {
   ami           = local.ami_id
   instance_type = "t3.micro"
-  key_name      = "roboshop"
+  key_name      = "aws-84s"
   vpc_security_group_ids = [local.catalogue_sg_id]
   subnet_id = local.private_subnet_id
   iam_instance_profile = "Ec2RoleToFetchSSMParams"
