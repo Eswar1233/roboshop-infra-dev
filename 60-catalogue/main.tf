@@ -35,6 +35,8 @@ resource "aws_instance" "catalogue" {
 
 # when instance created and completed we trigger this .
 resource "terraform_data" "catalogue" {
+  depends_on = [time_sleep.wait_for_ssh]
+  
   triggers_replace = [
     aws_instance.catalogue.id
   ]
@@ -59,6 +61,12 @@ resource "terraform_data" "catalogue" {
     ]
   }
 }
+
+resource "time_sleep" "wait_for_ssh" {
+  depends_on = [aws_instance.catalogue]
+  create_duration = "90s"
+}
+
 
 
 resource "aws_ec2_instance_state" "catalogue"{
