@@ -20,9 +20,10 @@ resource "aws_lb_target_group" "catalogue" {
 resource "aws_instance" "catalogue" {
   ami           = local.ami_id
   instance_type = "t3.micro"
+  # key_name      = "roboshop"
   vpc_security_group_ids = [local.catalogue_sg_id]
   subnet_id = local.private_subnet_id
-  # iam_instance_profile = "Ec2RoleToFetchSSMParams"
+  iam_instance_profile = "Ec2RoleToFetchSSMParams"
   tags = merge (
     local.common_tags,
     {
@@ -36,7 +37,7 @@ resource "aws_instance" "catalogue" {
 # when instance created and completed we trigger this .
 resource "terraform_data" "catalogue" {
   depends_on = [time_sleep.wait_for_ssh]
-  
+
   triggers_replace = [
     aws_instance.catalogue.id
   ]
